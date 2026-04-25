@@ -1,6 +1,6 @@
 {
-    "name": "visiontest",
-    "short_name": "visiontest",
+    "name": "visionmate",
+    "short_name": "visionmate",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
