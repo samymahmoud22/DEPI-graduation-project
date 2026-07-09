@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -23,12 +26,31 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   GoogleMapController? _mapController;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  StreamSubscription? _accelerometerSubscription;
+  static const double shakeThreshold = 15.0;
+  DateTime? _lastShakeTime;
 
   @override
   void initState() {
     super.initState();
 
-    // Pulse animation for the mic button.
+    _accelerometerSubscription = accelerometerEventStream().listen((AccelerometerEvent event) {
+      double speed = event.x * event.x + event.y * event.y + event.z * event.z;
+      if (speed > shakeThreshold * shakeThreshold) {
+        final now = DateTime.now();
+        if (_lastShakeTime == null || now.difference(_lastShakeTime!) > const Duration(seconds: 2)) {
+          _lastShakeTime = now;
+
+          final ctrl = ref.read(navigationControllerProvider);
+          if (!ctrl.isNavigating) {
+            HapticFeedback.vibrate();
+            ctrl.startVoiceInput();
+          }
+        }
+      }
+    });
+
+   
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -38,7 +60,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Fetch GPS on entry.
+   
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(navigationControllerProvider).fetchCurrentLocation();
     });
@@ -46,12 +68,13 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
   @override
   void dispose() {
+    _accelerometerSubscription?.cancel();
     _pulseController.dispose();
     _mapController?.dispose();
     super.dispose();
   }
 
-  // ── Map helpers ─────────────────────────────────────────────────────
+
 
   LatLng get _cameraTarget {
     final ctrl = ref.read(navigationControllerProvider);
@@ -64,7 +87,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         ctrl.currentPosition!.longitude,
       );
     }
-    return const LatLng(30.0444, 31.2357); // Cairo default
+    return const LatLng(30.0444, 31.2357); 
   }
 
   Set<Marker> get _markers {
@@ -98,7 +121,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     return markers;
   }
 
-  // ── Build ───────────────────────────────────────────────────────────
+
 
   @override
   Widget build(BuildContext context) {
@@ -118,9 +141,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  // STATE 1 — Waiting for destination (initial)
-  // ══════════════════════════════════════════════════════════════════════
 
   Widget _buildWaitingState(NavigationController ctrl, AppTranslations t) {
     return GestureDetector(
@@ -130,11 +150,10 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
         child: Column(
           children: [
-            // Header
+            
             _buildHeader(t),
             const SizedBox(height: 20),
 
-            // Current address
             if (ctrl.isLoading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
@@ -147,7 +166,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
             const Spacer(),
 
-            // Animated mic icon
+           
             ScaleTransition(
               scale: ctrl.isListeningForDestination
                   ? const AlwaysStoppedAnimation(1.0)
@@ -207,7 +226,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
             const Spacer(),
 
-            // Hint text
+            
             Text(
               t.get('tap_say_name'),
               textDirection: TextDirection.rtl,
@@ -219,10 +238,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  // STATE 2 — Route found, ready to navigate
-  // ══════════════════════════════════════════════════════════════════════
-
+ 
   Widget _buildRouteFoundState(NavigationController ctrl, AppTranslations t) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
@@ -232,7 +248,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
           _buildHeader(t),
           const SizedBox(height: 16),
 
-          // Destination info card
+        
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -272,7 +288,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
           const SizedBox(height: 14),
 
-          // Map
+          
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -292,7 +308,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
           const SizedBox(height: 14),
 
-          // Start Navigation button
+         
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -315,7 +331,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
           const SizedBox(height: 8),
 
-          // Cancel / new destination
+          
           SizedBox(
             width: double.infinity,
             height: 44,
@@ -332,20 +348,18 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  // STATE 3 — Navigating (live GPS tracking)
-  // ══════════════════════════════════════════════════════════════════════
+ 
 
   Widget _buildNavigatingState(NavigationController ctrl, AppTranslations t) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      // Tap anywhere to re-hear the current step.
+
       onTap: () => ctrl.announceCurrentStep(),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
         child: Column(
           children: [
-            // Header with stop button
+            
             Row(
               children: [
                 IconButton(
@@ -363,7 +377,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
                     style: AppTextStyles.screenTitle,
                   ),
                 ),
-                // Toggle Safe Walk
+                
                 IconButton(
                   onPressed: () => ctrl.toggleSafeWalk(),
                   icon: Icon(
@@ -383,7 +397,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
             const SizedBox(height: 12),
 
-            // Scrollable Middle Content to prevent overflow
+            
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -401,7 +415,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
                     const SizedBox(height: 8),
 
-                    // Safe Walk Active Status Badge
+                    
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
@@ -444,7 +458,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
                     const SizedBox(height: 16),
 
-                    // Map (smaller during navigation)
+                   
                     SizedBox(
                       height: 180,
                       child: ClipRRect(
@@ -465,7 +479,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
                     const SizedBox(height: 16),
 
-                    // Current step card
+                    
                     if (ctrl.currentStep != null)
                       NavigationStepCard(
                         step: ctrl.currentStep!,
@@ -479,8 +493,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
               ),
             ),
 
-            // Fixed bottom controls
-            // Hint
+          
             Text(
               t.get('tap_reannounce'),
               textDirection: TextDirection.rtl,
@@ -489,7 +502,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
             const SizedBox(height: 12),
 
-            // Stop button
+            
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -518,10 +531,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  // SHARED WIDGETS
-  // ══════════════════════════════════════════════════════════════════════
-
+ 
   Widget _buildHeader(AppTranslations t) {
     return Row(
       children: [
