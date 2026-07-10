@@ -89,10 +89,8 @@ dependencies:
   flutter_dotenv: ^5.1.0
   vibration: ^2.0.0
   url_launcher: ^6.3.2
-
-  vibration: ^2.0.0
   sensors_plus: ^6.0.0
-  url_launcher: ^6.3.2
+  
 
 
 dev_dependencies:
