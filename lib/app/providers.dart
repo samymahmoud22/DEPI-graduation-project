@@ -113,9 +113,10 @@ final currentUserProfileProvider = FutureProvider<UserProfileModel?>((ref) async
 
 final generativeModelProvider = Provider<GenerativeModel>((ref) {
   final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+  final effectiveApiKey = apiKey.isEmpty ? 'dummy_api_key' : apiKey;
   return GenerativeModel(
-    model: 'gemini-2.5-flash',
-    apiKey: apiKey,
+    model: 'gemini-1.5-flash-latest',
+    apiKey: effectiveApiKey,
   );
 });
 

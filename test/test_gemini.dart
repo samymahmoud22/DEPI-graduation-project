@@ -18,7 +18,7 @@ void main() {
     expect(apiKey.isNotEmpty, true);
     
     final model = GenerativeModel(
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash-latest',
       apiKey: apiKey,
     );
     

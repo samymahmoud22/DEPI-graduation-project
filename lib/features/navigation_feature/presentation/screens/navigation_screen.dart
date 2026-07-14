@@ -30,25 +30,12 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   static const double shakeThreshold = 15.0;
   DateTime? _lastShakeTime;
 
+
   @override
   void initState() {
     super.initState();
 
-    _accelerometerSubscription = accelerometerEventStream().listen((AccelerometerEvent event) {
-      double speed = event.x * event.x + event.y * event.y + event.z * event.z;
-      if (speed > shakeThreshold * shakeThreshold) {
-        final now = DateTime.now();
-        if (_lastShakeTime == null || now.difference(_lastShakeTime!) > const Duration(seconds: 2)) {
-          _lastShakeTime = now;
 
-          final ctrl = ref.read(navigationControllerProvider);
-          if (!ctrl.isNavigating) {
-            HapticFeedback.vibrate();
-            ctrl.startVoiceInput();
-          }
-        }
-      }
-    });
 
    
     _pulseController = AnimationController(
@@ -60,7 +47,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-   
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(navigationControllerProvider).fetchCurrentLocation();
     });
@@ -68,7 +55,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
   @override
   void dispose() {
-    _accelerometerSubscription?.cancel();
+
     _pulseController.dispose();
     _mapController?.dispose();
     super.dispose();
@@ -87,7 +74,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         ctrl.currentPosition!.longitude,
       );
     }
-    return const LatLng(30.0444, 31.2357); 
+
   }
 
   Set<Marker> get _markers {
@@ -150,9 +137,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
         child: Column(
           children: [
-            
-            _buildHeader(t),
-            const SizedBox(height: 20),
 
             if (ctrl.isLoading)
               const Padding(
@@ -166,7 +150,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
             const Spacer(),
 
-           
+
             ScaleTransition(
               scale: ctrl.isListeningForDestination
                   ? const AlwaysStoppedAnimation(1.0)
@@ -248,7 +232,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
           _buildHeader(t),
           const SizedBox(height: 16),
 
-        
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -308,7 +292,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
           const SizedBox(height: 14),
 
-         
+
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -348,7 +332,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
   }
 
- 
 
   Widget _buildNavigatingState(NavigationController ctrl, AppTranslations t) {
     return GestureDetector(
@@ -359,7 +342,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
         child: Column(
           children: [
-            
+
             Row(
               children: [
                 IconButton(
@@ -458,7 +441,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
                     const SizedBox(height: 16),
 
-                   
+
                     SizedBox(
                       height: 180,
                       child: ClipRRect(
@@ -493,7 +476,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
               ),
             ),
 
-          
+
             Text(
               t.get('tap_reannounce'),
               textDirection: TextDirection.rtl,
@@ -502,7 +485,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
             const SizedBox(height: 12),
 
-            
+
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -531,7 +514,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
   }
 
- 
+
   Widget _buildHeader(AppTranslations t) {
     return Row(
       children: [
