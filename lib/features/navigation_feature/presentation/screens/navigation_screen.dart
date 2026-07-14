@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -24,11 +26,15 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
   GoogleMapController? _mapController;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  StreamSubscription? _accelerometerSubscription;
+  static const double shakeThreshold = 15.0;
+  DateTime? _lastShakeTime;
 
 
   @override
   void initState() {
     super.initState();
+
 
 
    
@@ -41,7 +47,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(navigationControllerProvider).fetchCurrentLocation();
     });
@@ -68,7 +74,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         ctrl.currentPosition!.longitude,
       );
     }
-    return const LatLng(30.0444, 31.2357);
+
   }
 
   Set<Marker> get _markers {
@@ -102,7 +108,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     return markers;
   }
 
- 
+
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +128,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
   }
 
-  
+
   Widget _buildWaitingState(NavigationController ctrl, AppTranslations t) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -131,11 +137,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
         padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
         child: Column(
           children: [
-           
-            _buildHeader(t),
-            const SizedBox(height: 20),
 
-            
             if (ctrl.isLoading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
@@ -148,7 +150,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
             const Spacer(),
 
-            
+
             ScaleTransition(
               scale: ctrl.isListeningForDestination
                   ? const AlwaysStoppedAnimation(1.0)
@@ -230,7 +232,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
           _buildHeader(t),
           const SizedBox(height: 16),
 
-          
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -290,7 +292,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
           const SizedBox(height: 14),
 
-          
+
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -330,17 +332,17 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
   }
 
-  
+
   Widget _buildNavigatingState(NavigationController ctrl, AppTranslations t) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      // Tap anywhere to re-hear the current step.
+
       onTap: () => ctrl.announceCurrentStep(),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
         child: Column(
           children: [
-           
+
             Row(
               children: [
                 IconButton(
@@ -358,7 +360,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
                     style: AppTextStyles.screenTitle,
                   ),
                 ),
-                // Toggle Safe Walk
+                
                 IconButton(
                   onPressed: () => ctrl.toggleSafeWalk(),
                   icon: Icon(
@@ -439,7 +441,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
                     const SizedBox(height: 16),
 
-                    
+
                     SizedBox(
                       height: 180,
                       child: ClipRRect(
@@ -474,7 +476,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
               ),
             ),
 
-            
+
             Text(
               t.get('tap_reannounce'),
               textDirection: TextDirection.rtl,
@@ -483,7 +485,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
 
             const SizedBox(height: 12),
 
-           
+
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -512,7 +514,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen>
     );
   }
 
-  
 
   Widget _buildHeader(AppTranslations t) {
     return Row(

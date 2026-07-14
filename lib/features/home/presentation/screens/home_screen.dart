@@ -29,21 +29,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
 
-    
+
     _accelerometerSubscription = accelerometerEventStream().listen((AccelerometerEvent event) {
       
       double speed = event.x * event.x + event.y * event.y + event.z * event.z;
       
-    
       if (speed > shakeThreshold * shakeThreshold) {
         final now = DateTime.now();
         if (_lastShakeTime == null || now.difference(_lastShakeTime!) > const Duration(seconds: 2)) {
           _lastShakeTime = now;
 
-         
-          HapticFeedback.vibrate();
 
-          
           if (mounted) {
             ref.read(voiceAssistantControllerProvider).handleVolumeUpTrigger(context);
           }
@@ -54,7 +50,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void dispose() {
-    
+
     _accelerometerSubscription?.cancel();
     super.dispose();
   }
