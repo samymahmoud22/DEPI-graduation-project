@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -18,6 +21,44 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  StreamSubscription? _accelerometerSubscription;
+  static const double shakeThreshold = 15.0; 
+  DateTime? _lastShakeTime;
+
+  @override
+  void initState() {
+    super.initState();
+
+    
+    _accelerometerSubscription = accelerometerEventStream().listen((AccelerometerEvent event) {
+      
+      double speed = event.x * event.x + event.y * event.y + event.z * event.z;
+      
+    
+      if (speed > shakeThreshold * shakeThreshold) {
+        final now = DateTime.now();
+        if (_lastShakeTime == null || now.difference(_lastShakeTime!) > const Duration(seconds: 2)) {
+          _lastShakeTime = now;
+
+         
+          HapticFeedback.vibrate();
+
+          
+          if (mounted) {
+            ref.read(voiceAssistantControllerProvider).handleVolumeUpTrigger(context);
+          }
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    
+    _accelerometerSubscription?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final voiceController = ref.watch(voiceAssistantControllerProvider);

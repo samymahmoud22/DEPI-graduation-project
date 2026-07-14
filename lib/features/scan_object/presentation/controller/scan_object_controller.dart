@@ -11,6 +11,8 @@ import '../../../history/domain/usecases/save_history_item_usecase.dart';
 import '../../domain/usecases/detect_objects_usecase.dart';
 import '../../domain/usecases/speak_detected_object_usecase.dart';
 
+
+
 final scanObjectControllerProvider = ChangeNotifierProvider.autoDispose<ScanObjectController>((ref) {
   final detectObjects = ref.read(detectObjectsUseCaseProvider);
   final speakDetectedObject = ref.read(speakDetectedObjectUseCaseProvider);
@@ -93,8 +95,11 @@ class ScanObjectController extends ChangeNotifier {
       // Speak the detected object
       await _speakDetectedObjectUseCase(result);
     } catch (e) {
-      _errorMessage = 'Error: $e';
-      await _speakDetectedObjectUseCase('حدث خطأ أثناء التعرف على الأشياء');
+      debugPrint("ScanObjectController Error: $e");
+      final displayError = e.toString().replaceAll('ServerException: ', '');
+      
+      _errorMessage = displayError;
+      await _speakDetectedObjectUseCase('حدث خطأ: $displayError');
     } finally {
       _isProcessing = false;
       notifyListeners();

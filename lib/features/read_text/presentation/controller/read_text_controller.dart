@@ -12,6 +12,8 @@ import '../../../history/domain/usecases/save_history_item_usecase.dart';
 import '../../domain/usecases/read_text_from_image_usecase.dart';
 import '../../domain/usecases/speak_text_usecase.dart';
 
+
+
 final readTextControllerProvider = ChangeNotifierProvider.autoDispose<ReadTextController>((ref) {
   final readTextFromImage = ref.read(readTextFromImageUseCaseProvider);
   final speakText = ref.read(speakTextUseCaseProvider);
@@ -107,8 +109,11 @@ class ReadTextController extends ChangeNotifier {
       // Speak the detected text
       await _speakTextUseCase(result);
     } catch (e) {
-      _errorMessage = 'Error: $e';
-      await _speakTextUseCase('حدث خطأ أثناء قراءة النص');
+      debugPrint("ReadTextController Error: $e");
+      final displayError = e.toString().replaceAll('ServerException: ', '');
+      
+      _errorMessage = displayError;
+      await _speakTextUseCase('حدث خطأ: $displayError');
     } finally {
       _isProcessing = false;
       notifyListeners();

@@ -36,7 +36,7 @@ class VoiceAssistantController extends ChangeNotifier {
   SpeechService get _speechService => _ref.read(speechServiceProvider);
   TtsService get _ttsService => _ref.read(ttsServiceProvider);
 
-  /// Entry-point called when a voice trigger is requested.
+  /// Entry-point called when a voice trigger is requested (with navigation).
   Future<void> handleVolumeUpTrigger(BuildContext context) async {
     // Prevent overlapping triggers.
     if (_isListening) return;
@@ -67,7 +67,9 @@ class VoiceAssistantController extends ChangeNotifier {
       }
 
       // ── 3. Resolve route from the transcribed command ───────────────────
+      debugPrint("Voice Assistant: Heard command = '$command'");
       final route = _commandRouter.resolveRoute(command);
+      debugPrint("Voice Assistant: Resolved route = '$route'");
 
       if (route == 'back') {
         await _ttsService.speak(t.get('going_back'), languageCode: langCode);
@@ -81,8 +83,12 @@ class VoiceAssistantController extends ChangeNotifier {
       }
 
       if (route == AppRoutes.home) {
-        // Command was not recognized — tell the user.
-        await _ttsService.speak(t.get('did_not_understand'), languageCode: langCode);
+        // Command was not recognized — tell the user what was heard.
+        debugPrint("Voice Assistant: Command not recognized, telling user.");
+        final msg = langCode == 'ar'
+            ? 'سمعت: $command، لكن لم أفهم الأمر'
+            : 'I heard: $command, but did not understand the command';
+        await _ttsService.speak(msg, languageCode: langCode);
         return;
       }
 
@@ -91,6 +97,55 @@ class VoiceAssistantController extends ChangeNotifier {
 
       if (!context.mounted) return;
       GoRouter.of(context).push(route);
+    } catch (e) {
+      debugPrint("Voice Assistant Error: $e");
+      if (e.toString().contains("not supported")) {
+        await _ttsService.speak(t.get('voice_assistant_unsupported'), languageCode: langCode);
+      } else {
+        await _ttsService.speak(t.get('voice_assistant_error'), languageCode: langCode);
+      }
+    } finally {
+      _isListening = false;
+      notifyListeners();
+    }
+  }
+
+  /// Listen-only mode: captures speech and reads it back via TTS.
+  /// No navigation is performed. Used by Home and Location screens
+  /// where the mic should only listen and respond.
+  Future<void> handleListenOnly(BuildContext context) async {
+    if (_isListening) return;
+
+    _isListening = true;
+    _lastText = '';
+    notifyListeners();
+
+    final currentLocale = _ref.read(localeProvider);
+    final t = _ref.read(translationsProvider);
+    final langCode = currentLocale.languageCode;
+    final speechLocale = langCode == 'ar' ? 'ar_SA' : 'en_US';
+
+    try {
+      // ── 1. Haptic + audio feedback ──────────────────────────────────────
+      await _notifyUser();
+
+      // ── 2. Listen for speech ─────────────────────────────────────
+      final command = await _speechService.listen(localeId: speechLocale);
+      _lastText = command ?? '';
+      notifyListeners();
+
+      if (!context.mounted) return;
+
+      if (command == null || command.trim().isEmpty) {
+        await _ttsService.speak(t.get('did_not_hear'), languageCode: langCode);
+        return;
+      }
+
+      // ── 3. Speak back what was heard (no navigation) ────────────────────
+      final heardMsg = langCode == 'ar'
+          ? 'سمعت: $command'
+          : 'I heard: $command';
+      await _ttsService.speak(heardMsg, languageCode: langCode);
     } catch (e) {
       debugPrint("Voice Assistant Error: $e");
       if (e.toString().contains("not supported")) {
